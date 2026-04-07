@@ -23,8 +23,24 @@ class AIClient:
         elif self.provider == "ollama":
             all_messages = []
             if system:
-                all_messages.append({"role": "system", "content": system}) #собираем новый список: сначала system (если есть), потом остальные сообщения
-            all_messages.extend(messages)
+                all_messages.append({"role": "system", "content": system})
+    
+            for msg in messages:
+                if isinstance(msg["content"], list):  # если есть картинка
+                    new_content = []
+                    for block in msg["content"]:
+                        if block["type"] == "image":  # конвертируем формат
+                            new_content.append({
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/png;base64,{block['source']['data']}"
+                                }
+                            })
+                        else:
+                            new_content.append(block)  # текст оставляем как есть
+                    all_messages.append({"role": msg["role"], "content": new_content})
+                else:
+                    all_messages.append(msg)
 
             response = self._client.chat.completions.create(
                 model="llava",
